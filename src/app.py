@@ -14,6 +14,22 @@ CORS(app)
 
 # create the jackson family object
 jackson_family = FamilyStructure("Jackson")
+jackson_family.add_member({
+    "first_name": "John",
+    "age": 33,
+    "lucky_numbers": [7, 13, 22]
+})
+jackson_family.add_member({
+    "first_name": "Jane",
+    "age": 35,
+    "lucky_numbers": [10, 14, 3]
+})
+jackson_family.add_member({
+    "first_name": "Jimmy",
+    "age": 5,
+    "lucky_numbers": [1]
+})
+
 
 # Handle/serialize errors like a JSON object
 @app.errorhandler(APIException)
@@ -30,13 +46,45 @@ def handle_hello():
 
     # this is how you can use the Family datastructure by calling its methods
     members = jackson_family.get_all_members()
-    response_body = {
-        "hello": "world",
-        "family": members
+    return jsonify(members), 200
+
+@app.reute('/members/<int:id>', methods=['GET'])
+def get_member(id):
+    member = jackson_family.get_member(id)
+    if member is None:
+        raise APIException("Member not found", status_code=404)
+    
+    return jsonify(member), 200
+
+@app.route('/member', methods=['POST'])
+def handel_new_member():
+    request_body = request.get_json()
+    if request_body is None:
+        raise APIException("Request body must be JSON", status_code=404)
+    member = {
+        "id": jackson_family._generateId(),
+        "first_name": request_body.get("first_name", ""),
+        "last_name": "Jackson",
+        "age": request_body.get("age", 0),
+        "lucky_numbers": request_body.get("lucky_numbers", []) 
     }
 
+    jackson_family.add_member(member)
+    response_body = {
+        "id": member["id"],
+        "first_name": member["first_name"],
+        "age": member["age"],
+        "lucky_numbers": member["lucky_numbers"]
+    }
 
     return jsonify(response_body), 200
+
+@app.route('/member/<int:id>', methods=['DELETE'])
+def handle_delete_member(id):
+    deleted = jackson_family.delete_member(id)
+    if not deleted:
+        raise APIException("Memeber not found", status_code=404)
+    return jsonify({"msg": "Member deleted successfully"}), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
